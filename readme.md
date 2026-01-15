@@ -1,8 +1,10 @@
 # Codebase Git Visualizer
 
-A lightweight, zero-dependency tool to visualize your git repository as an interactive Icicle Chart. It maps your file system and overlays live Git status (Modified, Created, Deleted), helping you spot complexity and review changes visually.
+A lightweight tool to visualize your git repository as an interactive Icicle Chart. It maps your file system and overlays live Git status (Modified, Created, Deleted), helping you spot complexity and review changes visually.
 
-*(You can replace this link with an actual screenshot later)*
+I created this to try and better visualise how my codebase is changing as AI is writing more and more code. 
+
+![Codebase Visualizer Preview](preview.png)
 
 ## Features
 
@@ -13,6 +15,7 @@ A lightweight, zero-dependency tool to visualize your git repository as an inter
   * **Uniform (Count):** See the architectural complexity by treating every file as equal width.
 * **Focus Mode:** Toggle to hide all "Clean" files, isolating only your active changes (perfect for self-code-review).
 * **Live Refresh:** No restart required. Just save your code, hit "Refresh" in the browser, and see the map update.
+* **Commit Explorer:** Move between commits to see the changes in the codebase over time.
 
 ## Prerequisites
 
