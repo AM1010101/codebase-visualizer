@@ -94,17 +94,14 @@ export async function fetchData() {
     const container = document.getElementById("canvas");
     if (!container) return;
 
-    // Preserve essential UI elements
-    const tooltip = document.getElementById('tooltip');
-    const controls = document.getElementById('timeline-controls');
+    // Remove any existing loading overlay
+    const existingLoading = container.querySelector('.loading-overlay');
+    if (existingLoading) existingLoading.remove();
 
-    container.innerHTML = '';
-    if (tooltip) container.appendChild(tooltip);
-    if (controls) container.appendChild(controls);
-
+    // Create loading overlay (doesn't clear the SVG)
     const loading = document.createElement('div');
-    loading.className = 'loading';
-    loading.innerText = isDiff ? 'Calculating differences...' : 'Scanning codebase...';
+    loading.className = 'loading-overlay';
+    loading.innerHTML = `<div class="loading">${isDiff ? 'Calculating differences...' : 'Scanning codebase...'}</div>`;
     container.appendChild(loading);
 
     try {
@@ -119,10 +116,17 @@ export async function fetchData() {
         const data = await res.json();
         setRawData(data);
 
+        // Remove loading overlay
+        const loadingOverlay = container.querySelector('.loading-overlay');
+        if (loadingOverlay) loadingOverlay.remove();
+
         // Return data so caller can trigger render
         return data;
     } catch (e) {
-        loading.innerText = 'Error fetching data. Is server.js running?';
+        const loadingOverlay = container.querySelector('.loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.innerHTML = '<div class="loading">Error fetching data. Is server.js running?</div>';
+        }
         console.error(e);
         throw e;
     }

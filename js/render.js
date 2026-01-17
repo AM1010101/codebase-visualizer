@@ -19,10 +19,6 @@ export async function render() {
     const tooltip = document.getElementById('tooltip');
     const controls = document.getElementById('timeline-controls');
 
-    container.innerHTML = ''; // Clear canvas
-    container.appendChild(tooltip); // Put tooltip back
-    if (controls) container.appendChild(controls); // Put controls back
-
     const width = container.clientWidth;
     const height = container.clientHeight;
     const mode = document.querySelector('input[name="mode"]:checked').value;
@@ -84,12 +80,18 @@ export async function render() {
 
     // Check if empty
     if (filteredData.value === 0 && hideClean) {
+        // Clear existing SVG
+        d3.select("#canvas svg").remove();
         const msg = document.createElement('div');
         msg.className = 'loading';
         msg.innerText = 'All files are clean! (Great job)';
         container.appendChild(msg);
         return;
     }
+
+    // Remove any loading messages
+    const loadingMsg = container.querySelector('.loading');
+    if (loadingMsg) loadingMsg.remove();
 
     // D3 LAYOUT
     const root = d3.hierarchy(filteredData).sum(d => {
@@ -105,68 +107,108 @@ export async function render() {
 
     d3.partition().size([width, height])(root);
 
-    const svg = d3.select("#canvas").append("svg").attr("width", width).attr("height", height);
-
-    const nodes = svg.selectAll("g")
-        .data(root.descendants())
-        .join("g")
-        .attr("transform", d => `translate(${d.x0},${d.y0})`);
-
     const collapsedFolders = getCollapsedFolders();
 
-    nodes.append("rect")
+    // Helper function to calculate fill color
+    const getFillColor = (d) => {
+        const isCollapsed = collapsedFolders.has(d.data.path) || (collapseClean && d.data.aggregateStatus === 'clean' && d.data.type === 'folder');
+
+        if (isCollapsed) {
+            if (d.data.collapsedStatus === 'created') return '#047857'; // Darker Emerald
+            if (d.data.collapsedStatus === 'modified') return '#b45309'; // Darker Amber
+            return '#94a3b8'; // Slate 400 for clean collapsed
+        }
+
+        if (d.data.type === 'folder') {
+            // Darker color for folders containing changes
+            if (colorMode === 'git' && d.data.aggregateStatus !== 'clean') {
+                return '#cbd5e1';
+            }
+        }
+
+        if (colorMode === 'age') {
+            if (d.data.last_modified) {
+                return timeScale(new Date(d.data.last_modified).getTime());
+            }
+            return '#e2e8f0';
+        }
+
+        if (colorMode === 'activity') {
+            if (d.data.type === 'file' && activityMap) {
+                // Build the full path for this file
+                const pathParts = [];
+                let current = d;
+                while (current.parent) {
+                    pathParts.unshift(current.data.name);
+                    current = current.parent;
+                }
+                const fullPath = pathParts.join('/');
+
+                const activityCount = activityMap[fullPath] || 0;
+                if (activityCount > 0) {
+                    return activityScale(activityCount);
+                }
+            }
+            return '#e2e8f0'; // Default light gray for no activity
+        }
+
+        return COLORS[d.data.git_status] || '#cbd5e1';
+    };
+
+    // Select or create SVG
+    let svg = d3.select("#canvas svg");
+    if (svg.empty()) {
+        svg = d3.select("#canvas").append("svg");
+        // Ensure tooltip and controls are on top
+        if (tooltip) container.appendChild(tooltip);
+        if (controls) container.appendChild(controls);
+    }
+
+    svg.attr("width", width).attr("height", height);
+
+    // Helper function to create a stable key for each node
+    const getNodeKey = (d) => {
+        // Build full path by traversing up the tree
+        const pathParts = [];
+        let current = d;
+        while (current) {
+            if (current.data.name) {
+                pathParts.unshift(current.data.name);
+            }
+            current = current.parent;
+        }
+        return pathParts.join('/') || 'root';
+    };
+
+    // DATA JOIN with key function (use full path as unique identifier)
+    const nodes = svg.selectAll("g.node")
+        .data(root.descendants(), getNodeKey);
+
+    // ENTER: New nodes (fade in)
+    const nodesEnter = nodes.enter()
+        .append("g")
+        .attr("class", "node")
+        .attr("transform", d => `translate(${d.x0},${d.y0})`)
+        .style("opacity", 0);
+
+    // Add rectangles to entering nodes
+    nodesEnter.append("rect")
         .attr("width", d => Math.max(0, d.x1 - d.x0))
         .attr("height", d => Math.max(0, d.y1 - d.y0))
         .attr("rx", 0)
         .attr("ry", 6)
-        .attr("fill", d => {
-            const isCollapsed = collapsedFolders.has(d.data.path) || (collapseClean && d.data.aggregateStatus === 'clean' && d.data.type === 'folder');
-
-            if (isCollapsed) {
-                if (d.data.collapsedStatus === 'created') return '#047857'; // Darker Emerald
-                if (d.data.collapsedStatus === 'modified') return '#b45309'; // Darker Amber
-                return '#94a3b8'; // Slate 400 for clean collapsed
-            }
-
-            if (d.data.type === 'folder') {
-                // Darker color for folders containing changes
-                if (colorMode === 'git' && d.data.aggregateStatus !== 'clean') {
-                    return '#cbd5e1';
-                }
-            }
-
-
-            if (colorMode === 'age') {
-                if (d.data.last_modified) {
-                    return timeScale(new Date(d.data.last_modified).getTime());
-                }
-                return '#e2e8f0';
-            }
-
-            if (colorMode === 'activity') {
-                if (d.data.type === 'file' && activityMap) {
-                    // Build the full path for this file
-                    const pathParts = [];
-                    let current = d;
-                    while (current.parent) {
-                        pathParts.unshift(current.data.name);
-                        current = current.parent;
-                    }
-                    const fullPath = pathParts.join('/');
-
-                    const activityCount = activityMap[fullPath] || 0;
-                    if (activityCount > 0) {
-                        return activityScale(activityCount);
-                    }
-                }
-                return '#e2e8f0'; // Default light gray for no activity
-            }
-
-            return COLORS[d.data.git_status] || '#cbd5e1';
-        })
-        .attr("stroke", "#fafafa") // Match canvas bg to create 'gap' effect
+        .attr("fill", getFillColor)
+        .attr("stroke", "#fafafa")
         .attr("stroke-width", 2)
-        .style("cursor", d => d.data.type === 'folder' ? 'pointer' : 'default')
+        .style("cursor", d => d.data.type === 'folder' ? 'pointer' : 'default');
+
+    // Add text labels to entering nodes
+    nodesEnter.append("text")
+        .attr("class", "node-label")
+        .text(d => d.data.name);
+
+    // Add event handlers to entering nodes
+    nodesEnter.select("rect")
         .on("click", (e, d) => {
             if (d.data.type === 'folder' && d.data.path) {
                 if (e.shiftKey) {
@@ -179,11 +221,52 @@ export async function render() {
         .on("mousemove", (e, d) => showTooltip(e, d))
         .on("mouseout", () => tooltip.style.opacity = 0);
 
-    nodes.append("text")
-        .attr("class", "node-label")
+    // UPDATE: Existing nodes (transition)
+    const nodesMerge = nodesEnter.merge(nodes);
+
+    // Ensure event handlers are attached to all nodes (new and updated)
+    nodesMerge.select("rect")
+        .on("click", (e, d) => {
+            if (d.data.type === 'folder' && d.data.path) {
+                if (e.shiftKey) {
+                    focusFolder(d);
+                } else {
+                    toggleCollapse(d.data.path);
+                }
+            }
+        })
+        .on("mousemove", (e, d) => showTooltip(e, d))
+        .on("mouseout", () => tooltip.style.opacity = 0);
+
+    // Transition groups (position)
+    nodesMerge
+        .interrupt() // Cancel any ongoing transitions
+        .transition()
+        .duration(400)
+        .ease(d3.easeCubicInOut)
+        .attr("transform", d => `translate(${d.x0},${d.y0})`)
+        .style("opacity", 1);
+
+    // Transition rectangles (size and color)
+    nodesMerge.select("rect")
+        .interrupt() // Cancel any ongoing transitions
+        .transition()
+        .duration(400)
+        .ease(d3.easeCubicInOut)
+        .attr("width", d => Math.max(0, d.x1 - d.x0))
+        .attr("height", d => Math.max(0, d.y1 - d.y0))
+        .attr("fill", getFillColor)
+        .style("cursor", d => d.data.type === 'folder' ? 'pointer' : 'default');
+
+    // Update text labels (position and visibility)
+    nodesMerge.select("text")
+        .text(d => d.data.name)
+        .interrupt() // Cancel any ongoing transitions
+        .transition()
+        .duration(400)
+        .ease(d3.easeCubicInOut)
         .attr("x", d => collapsedFolders.has(d.data.path) ? (d.x1 - d.x0) / 2 : 4)
         .attr("y", d => collapsedFolders.has(d.data.path) ? (d.y1 - d.y0) / 2 : 14)
-        .text(d => d.data.name)
         .attr("transform", d => {
             if (collapsedFolders.has(d.data.path)) {
                 return `rotate(90, ${(d.x1 - d.x0) / 2}, ${(d.y1 - d.y0) / 2})`;
@@ -202,6 +285,15 @@ export async function render() {
 
             return (w > 35 && h > 15) ? "block" : "none";
         });
+
+    // EXIT: Removed nodes (fade out)
+    nodes.exit()
+        .interrupt() // Cancel any ongoing transitions
+        .transition()
+        .duration(300)
+        .ease(d3.easeCubicOut)
+        .style("opacity", 0)
+        .remove();
 }
 
 /**
