@@ -12,7 +12,12 @@ import {
     getIgnoreList,
     addToIgnoreList as addToIgnoreListState,
     removeFromIgnoreList,
-    resetIgnoreList as resetIgnoreListState
+    resetIgnoreList as resetIgnoreListState,
+    getSelectedAuthor,
+    setSelectedAuthor,
+    getAllAuthors,
+    setAllAuthors,
+    getAllCommits
 } from './state.js';
 import { render } from './render.js';
 import { changeCommit } from './navigation.js';
@@ -237,4 +242,128 @@ export function updateIgnoreListDisplay() {
                 title="Remove from ignore list">×</button>
         </div>
     `).join('');
+}
+
+/**
+ * Populate author filter dropdown
+ */
+export function populateAuthorFilter() {
+    const allCommits = getAllCommits();
+    const committerSelect = document.getElementById('committerSelect');
+
+    if (!committerSelect || !allCommits) return;
+
+    // Extract unique authors
+    const authorsSet = new Set();
+    allCommits.forEach(commit => {
+        if (commit.author) {
+            authorsSet.add(commit.author);
+        }
+    });
+
+    const authors = Array.from(authorsSet).sort();
+    setAllAuthors(authors);
+
+    // Clear existing options except "All Authors"
+    committerSelect.innerHTML = '<option value="all">All Authors</option>';
+
+    // Add author options
+    authors.forEach(author => {
+        const option = document.createElement('option');
+        option.value = author;
+        option.textContent = author;
+        committerSelect.appendChild(option);
+    });
+}
+
+/**
+ * Filter commits by selected author
+ */
+export function filterCommitsByAuthor() {
+    const committerSelect = document.getElementById('committerSelect');
+    const commitSelect = document.getElementById('commitSelect');
+    const baseCommitSelect = document.getElementById('baseCommitSelect');
+
+    if (!committerSelect || !commitSelect) return;
+
+    const selectedAuthor = committerSelect.value;
+    setSelectedAuthor(selectedAuthor);
+
+    const allCommits = getAllCommits();
+
+    // Clear commit selects
+    commitSelect.innerHTML = '';
+    baseCommitSelect.innerHTML = '<option value="none">--- Select Base ---</option>';
+
+    // Add "Latest (Live)" option
+    const liveOpt = document.createElement('option');
+    liveOpt.value = 'latest';
+    liveOpt.innerText = 'Latest (Live)';
+    commitSelect.appendChild(liveOpt);
+
+    // Filter and add commits
+    allCommits.forEach(c => {
+        if (selectedAuthor === 'all' || c.author === selectedAuthor) {
+            const opt = document.createElement('option');
+            opt.value = c.hash;
+            opt.innerText = `${c.hash} - ${c.msg}`;
+            opt.dataset.author = c.author;
+            opt.dataset.date = c.date;
+            opt.dataset.msg = c.msg;
+            commitSelect.appendChild(opt);
+
+            const optBase = opt.cloneNode(true);
+            baseCommitSelect.appendChild(optBase);
+        }
+    });
+
+    // Trigger update
+    changeCommit();
+}
+
+/**
+ * Update file count display
+ */
+export function updateFileCount(totalFiles, modifiedFiles, createdFiles, deletedFiles) {
+    const fileCountElement = document.getElementById('fileCount');
+    if (!fileCountElement) return;
+
+    const parts = [];
+
+    if (totalFiles !== undefined) {
+        parts.push(`${totalFiles} file${totalFiles !== 1 ? 's' : ''} total`);
+    }
+
+    const changes = [];
+    if (modifiedFiles > 0) changes.push(`${modifiedFiles} modified`);
+    if (createdFiles > 0) changes.push(`${createdFiles} created`);
+    if (deletedFiles > 0) changes.push(`${deletedFiles} deleted`);
+
+    if (changes.length > 0) {
+        parts.push(changes.join(', '));
+    }
+
+    fileCountElement.textContent = parts.join(' • ');
+}
+
+/**
+ * Update commit message display with better formatting
+ */
+export function updateCommitMessage(message, author, date) {
+    const commitMessageElement = document.getElementById('commitMessage');
+    if (!commitMessageElement) return;
+
+    if (message === 'live') {
+        commitMessageElement.innerHTML = 'Viewing live local changes';
+    } else {
+        const formattedDate = date ? new Date(date).toLocaleString() : '';
+        const authorInfo = author ? `<span style="opacity: 0.7; font-size: 11px;">by ${author}</span>` : '';
+        const dateInfo = formattedDate ? `<span style="opacity: 0.7; font-size: 11px;">${formattedDate}</span>` : '';
+
+        commitMessageElement.innerHTML = `
+            <div style="font-weight: 500; margin-bottom: 4px;">${message}</div>
+            ${authorInfo ? `<div>${authorInfo}</div>` : ''}
+            ${dateInfo ? `<div>${dateInfo}</div>` : ''}
+        `;
+    }
 }

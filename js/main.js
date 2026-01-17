@@ -16,7 +16,10 @@ import {
     addToIgnoreList,
     removeFromIgnoreListUI,
     resetIgnoreList,
-    updateIgnoreListDisplay
+    updateIgnoreListDisplay,
+    populateAuthorFilter,
+    filterCommitsByAuthor,
+    updateCommitMessage
 } from './ui.js';
 import { changeCommit, navigateCommit } from './navigation.js';
 
@@ -29,6 +32,10 @@ async function init() {
 
     // Fetch initial data
     await fetchCommits();
+
+    // Populate author filter dropdown
+    populateAuthorFilter();
+
     await fetchData();
     render();
 
@@ -52,6 +59,7 @@ window.render = render;
 window.addToIgnoreList = addToIgnoreList;
 window.removeFromIgnoreListUI = removeFromIgnoreListUI;
 window.resetIgnoreList = resetIgnoreList;
+window.filterCommitsByAuthor = filterCommitsByAuthor;
 window.fetchData = async () => {
     await fetchData();
     render();

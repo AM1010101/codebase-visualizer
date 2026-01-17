@@ -1,14 +1,20 @@
-Age - done
+✅ Age - done
+✅ Changes by commit - done
+✅ Changes between commits - done
+✅ Changes between dates - done
+✅ Activity - count of changes, ideally filter by recency - done
+✅ Commits - done
+✅ add or remove from ignore list - done
+✅ files changed view - done
+✅ hover info not always on screen - done
+✅ animate - done
+✅ time filter - done
+✅ Filter by committer - done
+✅ Better display of commit message - done
+✅ Count of files shown - done
 
-Changes by commit
-Chnages between commits
-Changes between dates
+🚧 In Progress:
+- File tree for files changed (enhance existing)
 
-Activity - count of changes, ideally filter by recency
-Commits
-add or remove from ignore list
-files changed view
-right click menu
-hover info not always on screen
-animate
-time filter
+📋 Future:
+- right click menu

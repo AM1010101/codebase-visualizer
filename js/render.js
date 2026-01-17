@@ -5,7 +5,7 @@
 import { COLORS } from './config.js';
 import { getRawData, getCollapsedFolders, getActivityData, setActivityData } from './state.js';
 import { filterNode } from './filters.js';
-import { toggleCollapse, focusFolder } from './ui.js';
+import { toggleCollapse, focusFolder, updateFileCount } from './ui.js';
 import { fetchActivityData } from './api.js';
 
 /**
@@ -77,6 +77,31 @@ export async function render() {
         foldersFirst,
         activityMap: activityMap // Pass activity data for sizing
     });
+
+    // Count files by status
+    function countFiles(node) {
+        let counts = { total: 0, modified: 0, created: 0, deleted: 0 };
+
+        if (node.type === 'file') {
+            counts.total = 1;
+            if (node.git_status === 'modified') counts.modified = 1;
+            else if (node.git_status === 'created') counts.created = 1;
+            else if (node.git_status === 'deleted') counts.deleted = 1;
+        } else if (node.children) {
+            node.children.forEach(child => {
+                const childCounts = countFiles(child);
+                counts.total += childCounts.total;
+                counts.modified += childCounts.modified;
+                counts.created += childCounts.created;
+                counts.deleted += childCounts.deleted;
+            });
+        }
+
+        return counts;
+    }
+
+    const fileCounts = countFiles(filteredData);
+    updateFileCount(fileCounts.total, fileCounts.modified, fileCounts.created, fileCounts.deleted);
 
     // Check if empty
     if (filteredData.value === 0 && hideClean) {

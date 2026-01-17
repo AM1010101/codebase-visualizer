@@ -25,6 +25,10 @@ let collapsedFolders = new Set();
 // Ignore list state (loaded from localStorage)
 let ignoreList = loadIgnoreListFromStorage();
 
+// Author filter state
+let selectedAuthor = 'all';
+let allAuthors = [];
+
 /**
  * Load ignore list from localStorage
  */
@@ -154,4 +158,21 @@ export function removeFromIgnoreList(item) {
 export function resetIgnoreList() {
     ignoreList = [...DEFAULT_IGNORE_LIST];
     saveIgnoreListToStorage();
+}
+
+// Author filter management
+export function getSelectedAuthor() {
+    return selectedAuthor;
+}
+
+export function setSelectedAuthor(author) {
+    selectedAuthor = author;
+}
+
+export function getAllAuthors() {
+    return allAuthors;
+}
+
+export function setAllAuthors(authors) {
+    allAuthors = authors;
 }

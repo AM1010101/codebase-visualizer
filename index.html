@@ -36,6 +36,13 @@
                         Range</button>
                 </div>
 
+                <div id="committerFilterGroup">
+                    <label class="form-label">Filter by Author:</label>
+                    <select id="committerSelect" class="select-input" onchange="filterCommitsByAuthor()">
+                        <option value="all">All Authors</option>
+                    </select>
+                </div>
+
                 <div id="targetCommitGroup">
                     <label class="form-label">Target Commit:</label>
                     <select id="commitSelect" class="select-input" onchange="changeCommit()"></select>
@@ -62,7 +69,11 @@
                 </div>
 
                 <div id="commitInfo" class="commit-info">
-                    Viewing live local changes</div>
+                    <div id="commitMessage">Viewing live local changes</div>
+                    <div id="fileCount" class="file-count" style="margin-top: 8px; font-size: 12px; opacity: 0.8;">
+                        <!-- File count will be populated by JS -->
+                    </div>
+                </div>
             </div>
         </details>
 

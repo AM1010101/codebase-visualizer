@@ -12,6 +12,7 @@ import {
 } from './state.js';
 import { fetchData } from './api.js';
 import { render } from './render.js';
+import { updateCommitMessage } from './ui.js';
 
 /**
  * Handle commit selection changes
@@ -65,12 +66,12 @@ export function changeCommit() {
         const effectiveTarget = getEffectiveTarget();
 
         if (effectiveTarget === 'latest') {
-            if (info) info.innerText = "Viewing live local changes";
+            updateCommitMessage('live');
             if (label) label.innerText = "Latest (Live)";
         } else {
             const opt = select.options[select.selectedIndex];
             const date = new Date(opt.dataset.date).toLocaleDateString();
-            if (info) info.innerText = `${opt.dataset.author} on ${new Date(opt.dataset.date).toLocaleString()}`;
+            updateCommitMessage(opt.dataset.msg, opt.dataset.author, opt.dataset.date);
             if (label) label.innerText = `Commit ${opt.value.substring(0, 7)} (${date})`;
         }
         if (sublabel) sublabel.innerText = "";
