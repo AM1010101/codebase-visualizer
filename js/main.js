@@ -22,6 +22,7 @@ import {
     updateCommitMessage
 } from './ui.js';
 import { changeCommit, navigateCommit } from './navigation.js';
+import { fetchFileStats, cycleFileSort, openFile, highlightFileInTree, clearFileHighlight, highlightFileInListOnly, clearFileListHighlightOnly } from './fileChanges.js';
 
 /**
  * Initialize the application
@@ -60,8 +61,15 @@ window.addToIgnoreList = addToIgnoreList;
 window.removeFromIgnoreListUI = removeFromIgnoreListUI;
 window.resetIgnoreList = resetIgnoreList;
 window.filterCommitsByAuthor = filterCommitsByAuthor;
+window.cycleFileSort = cycleFileSort;
+window.openFile = openFile;
+window.highlightFileInTree = highlightFileInTree;
+window.clearFileHighlight = clearFileHighlight;
+window.highlightFileInListOnly = highlightFileInListOnly;
+window.clearFileListHighlightOnly = clearFileListHighlightOnly;
 window.fetchData = async () => {
     await fetchData();
+    await fetchFileStats();
     render();
 };
 

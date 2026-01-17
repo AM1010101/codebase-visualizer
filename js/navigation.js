@@ -13,6 +13,7 @@ import {
 import { fetchData } from './api.js';
 import { render } from './render.js';
 import { updateCommitMessage } from './ui.js';
+import { fetchFileStats } from './fileChanges.js';
 
 /**
  * Handle commit selection changes
@@ -78,7 +79,10 @@ export function changeCommit() {
     }
 
     updateNavButtons();
-    fetchData().then(() => render());
+    fetchData().then(() => {
+        fetchFileStats();
+        render();
+    });
 }
 
 /**

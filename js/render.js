@@ -3,7 +3,7 @@
  */
 
 import { COLORS } from './config.js';
-import { getRawData, getCollapsedFolders, getActivityData, setActivityData } from './state.js';
+import { getRawData, getCollapsedFolders, getActivityData, setActivityData, getHoveredFilePath } from './state.js';
 import { filterNode } from './filters.js';
 import { toggleCollapse, focusFolder, updateFileCount } from './ui.js';
 import { fetchActivityData } from './api.js';
@@ -67,6 +67,7 @@ export async function render() {
     // FILTER AND TRANSFORM DATA
     // When in activity mode, override the sizing mode to use activity-based sizing
     const effectiveMode = colorMode === 'activity' ? 'activity' : mode;
+    const hoveredFilePath = getHoveredFilePath();
 
     const filteredData = filterNode(rawData, '', {
         mode: effectiveMode,
@@ -75,7 +76,8 @@ export async function render() {
         collapseClean,
         sortMode,
         foldersFirst,
-        activityMap: activityMap // Pass activity data for sizing
+        activityMap: activityMap, // Pass activity data for sizing
+        hoveredFilePath: hoveredFilePath // Pass hovered file for highlighting
     });
 
     // Count files by status
@@ -243,8 +245,20 @@ export async function render() {
                 }
             }
         })
-        .on("mousemove", (e, d) => showTooltip(e, d))
-        .on("mouseout", () => tooltip.style.opacity = 0);
+        .on("mousemove", (e, d) => {
+            showTooltip(e, d);
+            // Highlight file in list if it's a file (without re-rendering)
+            if (d.data.type === 'file' && d.data.path && window.highlightFileInListOnly) {
+                window.highlightFileInListOnly(d.data.path);
+            }
+        })
+        .on("mouseout", () => {
+            tooltip.style.opacity = 0;
+            // Clear file highlight (without re-rendering)
+            if (window.clearFileListHighlightOnly) {
+                window.clearFileListHighlightOnly();
+            }
+        });
 
     // UPDATE: Existing nodes (transition)
     const nodesMerge = nodesEnter.merge(nodes);
@@ -260,8 +274,20 @@ export async function render() {
                 }
             }
         })
-        .on("mousemove", (e, d) => showTooltip(e, d))
-        .on("mouseout", () => tooltip.style.opacity = 0);
+        .on("mousemove", (e, d) => {
+            showTooltip(e, d);
+            // Highlight file in list if it's a file (without re-rendering)
+            if (d.data.type === 'file' && d.data.path && window.highlightFileInListOnly) {
+                window.highlightFileInListOnly(d.data.path);
+            }
+        })
+        .on("mouseout", () => {
+            tooltip.style.opacity = 0;
+            // Clear file highlight (without re-rendering)
+            if (window.clearFileListHighlightOnly) {
+                window.clearFileListHighlightOnly();
+            }
+        });
 
     // Transition groups (position)
     nodesMerge

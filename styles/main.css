@@ -580,3 +580,116 @@ input[type="range"]::-webkit-slider-thumb:hover {
     justify-content: space-between;
     text-transform: none;
 }
+
+/* File Changes List */
+.file-changes-list {
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 12px;
+}
+
+.file-changes-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.file-changes-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.file-changes-list::-webkit-scrollbar-thumb {
+    background-color: #e0e0e0;
+    border-radius: 20px;
+}
+
+.file-item {
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    background: #f9f9f9;
+    border: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.file-item:hover {
+    background: #f5f5f5;
+    border-color: #e0e0e0;
+    transform: translateX(2px);
+}
+
+.file-item-highlighted {
+    background: #e0f2fe !important;
+    border-color: #0ea5e9 !important;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
+
+.file-item-name {
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 11px;
+    color: #333;
+    word-break: break-all;
+    font-weight: 500;
+}
+
+.file-item-stats {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.stat-added {
+    color: #10b981;
+}
+
+.stat-removed {
+    color: #ef4444;
+}
+
+.stat-total {
+    color: #666;
+    margin-left: auto;
+}
+
+.loading-text {
+    text-align: center;
+    color: #999;
+    font-size: 11px;
+    padding: 20px;
+    font-style: italic;
+}
+
+.file-changes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.file-changes-count {
+    font-size: 10px;
+    color: #666;
+    font-weight: 500;
+}
+
+.file-changes-sort {
+    font-size: 10px;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.file-changes-sort:hover {
+    background: #f0f0f0;
+    color: #333;
+}

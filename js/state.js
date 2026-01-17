@@ -29,6 +29,9 @@ let ignoreList = loadIgnoreListFromStorage();
 let selectedAuthor = 'all';
 let allAuthors = [];
 
+// Hovered file state (for highlighting in treemap)
+let hoveredFilePath = null;
+
 /**
  * Load ignore list from localStorage
  */
@@ -175,4 +178,13 @@ export function getAllAuthors() {
 
 export function setAllAuthors(authors) {
     allAuthors = authors;
+}
+
+// Hovered file management
+export function getHoveredFilePath() {
+    return hoveredFilePath;
+}
+
+export function setHoveredFilePath(path) {
+    hoveredFilePath = path;
 }

@@ -143,6 +143,18 @@ export function filterNode(node, parentPath = '', options = {}) {
                 newNode.value = 1; // Normal weight for clean files
             }
         }
+
+        // Boost hovered file by 3x
+        if (options.hoveredFilePath) {
+            // Strip 'root/' prefix from nodePath for comparison
+            const normalizedNodePath = nodePath.startsWith('root/') ? nodePath.substring(5) : nodePath;
+            const normalizedHoveredPath = options.hoveredFilePath.startsWith('root/') ? options.hoveredFilePath.substring(5) : options.hoveredFilePath;
+
+            if (normalizedNodePath === normalizedHoveredPath) {
+                console.log(`🎯 BOOSTING FILE: ${nodePath} (normalized: ${normalizedNodePath}) from ${newNode.value} to ${newNode.value * 3}`);
+                newNode.value *= 3;
+            }
+        }
     } else if (isCollapsed) {
         // Collapsed folders get a minimum fixed value
         newNode.value = COLLAPSED_MIN_VALUE;

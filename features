@@ -12,9 +12,11 @@
 ✅ Filter by committer - done
 ✅ Better display of commit message - done
 ✅ Count of files shown - done
+✅ File list with +/- LOC stats (click to open, hover to highlight) - done
 
 🚧 In Progress:
 - File tree for files changed (enhance existing)
 
 📋 Future:
 - right click menu
+- more folder labels

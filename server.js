@@ -381,6 +381,75 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ error: e.message }));
         }
     }
+    // 2c. API: Get File Stats (lines added/removed)
+    else if (parsedUrl.pathname === '/api/file-stats') {
+        try {
+            const commit = parsedUrl.query.commit;
+            const base = parsedUrl.query.base;
+            const startDate = parsedUrl.query.startDate;
+            const endDate = parsedUrl.query.endDate;
+
+            let command;
+
+            // Date Range Mode
+            if (startDate && endDate) {
+                command = `git log --since="${startDate}" --until="${endDate}" --numstat --pretty=format:"" --no-merges`;
+            }
+            // Diff Mode: Compare target with base
+            else if (base && base !== 'none') {
+                const targetCommit = commit === 'latest' ? 'HEAD' : commit;
+                command = `git diff --numstat ${base} ${targetCommit}`;
+            }
+            // Single Commit Mode
+            else if (commit && commit !== 'latest') {
+                command = `git show --numstat --format="" ${commit}`;
+            }
+            // Live Mode
+            else {
+                command = 'git diff --numstat HEAD';
+            }
+
+            const output = execSync(command, { encoding: 'utf8' });
+            const fileStats = [];
+            const fileMap = new Map(); // To aggregate stats for date range mode
+
+            output.split('\n').forEach(line => {
+                if (!line.trim()) return;
+
+                const parts = line.split('\t');
+                if (parts.length < 3) return;
+
+                const added = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
+                const removed = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
+                const file = parts[2];
+
+                // For date range, aggregate stats
+                if (startDate && endDate) {
+                    if (fileMap.has(file)) {
+                        const existing = fileMap.get(file);
+                        existing.added += added;
+                        existing.removed += removed;
+                    } else {
+                        fileMap.set(file, { file, added, removed });
+                    }
+                } else {
+                    fileStats.push({ file, added, removed });
+                }
+            });
+
+            // Convert map to array for date range mode
+            const result = startDate && endDate
+                ? Array.from(fileMap.values())
+                : fileStats;
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        } catch (e) {
+            console.error('Error getting file stats:', e);
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: e.message }));
+        }
+    }
     // 3. API: Get Data (Current or Historic) - Now accepts POST with ignore list
     else if (parsedUrl.pathname === '/api/data') {
         try {
