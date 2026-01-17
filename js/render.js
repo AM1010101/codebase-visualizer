@@ -143,6 +143,7 @@ export async function render() {
         if (isCollapsed) {
             if (d.data.collapsedStatus === 'created') return '#047857'; // Darker Emerald
             if (d.data.collapsedStatus === 'modified') return '#b45309'; // Darker Amber
+            if (d.data.collapsedStatus === 'deleted') return 'url(#deleted-pattern)'; // Pattern for deleted
             return '#94a3b8'; // Slate 400 for clean collapsed
         }
 
@@ -157,7 +158,11 @@ export async function render() {
             if (d.data.last_modified) {
                 return timeScale(new Date(d.data.last_modified).getTime());
             }
-            return '#e2e8f0';
+            // Files get a slightly yellowish tint
+            if (d.data.type === 'file') {
+                return '#fef9e7'; // Very light warm beige for files
+            }
+            return '#e2e8f0'; // Gray for folders
         }
 
         if (colorMode === 'activity') {
@@ -176,7 +181,21 @@ export async function render() {
                     return activityScale(activityCount);
                 }
             }
-            return '#e2e8f0'; // Default light gray for no activity
+            // Files get a slightly yellowish tint
+            if (d.data.type === 'file') {
+                return '#fef9e7'; // Very light warm beige for files
+            }
+            return '#e2e8f0'; // Gray for folders
+        }
+
+        // Use pattern for deleted files in git status mode
+        if (colorMode === 'git' && d.data.git_status === 'deleted') {
+            return 'url(#deleted-pattern)';
+        }
+
+        // Files get a slightly yellowish tint in git mode when clean
+        if (colorMode === 'git' && d.data.type === 'file' && d.data.git_status === 'clean') {
+            return '#fbf7e9ff'; // Very light warm beige for clean files
         }
 
         return COLORS[d.data.git_status] || '#cbd5e1';
@@ -192,6 +211,37 @@ export async function render() {
     }
 
     svg.attr("width", width).attr("height", height);
+
+    // Define a pattern for deleted files (diagonal stripes)
+    let defs = svg.select("defs");
+    if (defs.empty()) {
+        defs = svg.append("defs");
+    }
+
+    // Create or update the deleted file pattern
+    let pattern = defs.select("#deleted-pattern");
+    if (pattern.empty()) {
+        pattern = defs.append("pattern")
+            .attr("id", "deleted-pattern")
+            .attr("patternUnits", "userSpaceOnUse")
+            .attr("width", 8)
+            .attr("height", 8)
+            .attr("patternTransform", "rotate(45)");
+
+        pattern.append("rect")
+            .attr("width", 8)
+            .attr("height", 8)
+            .attr("fill", "#ef4444"); // Red background
+
+        pattern.append("line")
+            .attr("x1", 0)
+            .attr("y1", 0)
+            .attr("x2", 0)
+            .attr("y2", 8)
+            .attr("stroke", "rgba(255, 255, 255, 0.3)")
+            .attr("stroke-width", 3);
+    }
+
 
     // Helper function to create a stable key for each node
     const getNodeKey = (d) => {
@@ -316,24 +366,73 @@ export async function render() {
         .transition()
         .duration(400)
         .ease(d3.easeCubicInOut)
-        .attr("x", d => collapsedFolders.has(d.data.path) ? (d.x1 - d.x0) / 2 : 4)
-        .attr("y", d => collapsedFolders.has(d.data.path) ? (d.y1 - d.y0) / 2 : 14)
+        .attr("x", d => {
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            const isCollapsed = collapsedFolders.has(d.data.path);
+            const shouldRotate = isCollapsed || (h > w * 1.5 && h > 30);
+
+            return shouldRotate ? w / 2 : 4;
+        })
+        .attr("y", d => {
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            const isCollapsed = collapsedFolders.has(d.data.path);
+            const shouldRotate = isCollapsed || (h > w * 1.5 && h > 30);
+
+            return shouldRotate ? h / 2 : 14;
+        })
         .attr("transform", d => {
-            if (collapsedFolders.has(d.data.path)) {
-                return `rotate(90, ${(d.x1 - d.x0) / 2}, ${(d.y1 - d.y0) / 2})`;
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            const isCollapsed = collapsedFolders.has(d.data.path);
+            const shouldRotate = isCollapsed || (h > w * 1.5 && h > 30);
+
+            if (shouldRotate) {
+                return `rotate(90, ${w / 2}, ${h / 2})`;
             }
             return "";
         })
-        .style("text-anchor", d => collapsedFolders.has(d.data.path) ? "middle" : "start")
-        .style("dominant-baseline", d => collapsedFolders.has(d.data.path) ? "middle" : "auto")
+        .style("text-anchor", d => {
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            const isCollapsed = collapsedFolders.has(d.data.path);
+            const shouldRotate = isCollapsed || (h > w * 1.5 && h > 30);
+
+            return shouldRotate ? "middle" : "start";
+        })
+        .style("dominant-baseline", d => {
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            const isCollapsed = collapsedFolders.has(d.data.path);
+            const shouldRotate = isCollapsed || (h > w * 1.5 && h > 30);
+
+            return shouldRotate ? "middle" : "auto";
+        })
         .style("display", d => {
             const w = d.x1 - d.x0;
             const h = d.y1 - d.y0;
+            const isCollapsed = collapsedFolders.has(d.data.path);
+            const shouldRotate = isCollapsed || (h > w * 1.5 && h > 30);
 
-            if (collapsedFolders.has(d.data.path)) {
-                return h > 20 ? "block" : "none"; // Show vertical text if enough height
+            // Minimum weight threshold - don't show labels for very small items
+            const MIN_WEIGHT_FOR_LABEL = 8;
+            if (d.value < MIN_WEIGHT_FOR_LABEL && !isCollapsed) {
+                return "none";
             }
 
+            if (shouldRotate) {
+                // For rotated text, we need enough height
+                return h > 30 ? "block" : "none";
+            }
+
+            // Horizontal text thresholds - balanced approach
+            // Folders need moderate space to show labels
+            if (d.data.type === 'folder') {
+                return (w > 40 && h > 16) ? "block" : "none";
+            }
+
+            // Files need slightly less space
             return (w > 35 && h > 15) ? "block" : "none";
         });
 

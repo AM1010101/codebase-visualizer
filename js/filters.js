@@ -118,8 +118,13 @@ export function filterNode(node, parentPath = '', options = {}) {
         if (mode === 'size') {
             let baseValue = node.value || 0;
 
-            // Boost non-clean files to minimum size for visibility
-            if (node.git_status !== 'clean') {
+            // Special handling for deleted files - they need a visible size
+            if (node.git_status === 'deleted') {
+                const MIN_DELETED_FILE_SIZE = 8000; // 8KB minimum for deleted files
+                baseValue = Math.max(baseValue, MIN_DELETED_FILE_SIZE);
+            }
+            // Boost other non-clean files to minimum size for visibility
+            else if (node.git_status !== 'clean') {
                 const MIN_DIRTY_FILE_SIZE = 5000; // 5KB minimum
                 baseValue = Math.max(baseValue, MIN_DIRTY_FILE_SIZE);
             }
@@ -137,7 +142,9 @@ export function filterNode(node, parentPath = '', options = {}) {
             }
         } else {
             // Uniform mode: give non-clean files more weight
-            if (node.git_status !== 'clean') {
+            if (node.git_status === 'deleted') {
+                newNode.value = 8; // Extra weight for deleted files to ensure visibility
+            } else if (node.git_status !== 'clean') {
                 newNode.value = 5; // 5x weight for dirty files
             } else {
                 newNode.value = 1; // Normal weight for clean files
