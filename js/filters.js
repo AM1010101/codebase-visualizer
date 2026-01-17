@@ -125,6 +125,16 @@ export function filterNode(node, parentPath = '', options = {}) {
             }
 
             newNode.value = baseValue;
+        } else if (mode === 'activity' && options.activityMap) {
+            // Activity mode: size files by their change count
+            const activityCount = options.activityMap[nodePath] || 0;
+            if (activityCount > 0) {
+                // Scale activity: 1 change = weight 10, up to very active files
+                newNode.value = activityCount * 10;
+            } else {
+                // Files with no activity get minimal weight
+                newNode.value = 1;
+            }
         } else {
             // Uniform mode: give non-clean files more weight
             if (node.git_status !== 'clean') {

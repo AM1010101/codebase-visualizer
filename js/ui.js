@@ -21,9 +21,14 @@ export function toggleColorMode() {
     if (!colorModeGroup) return;
 
     const colorMode = colorModeGroup.value;
-    const container = document.getElementById('ageThresholdContainer');
-    if (container) {
-        container.classList.toggle('active', colorMode === 'age');
+    const ageContainer = document.getElementById('ageThresholdContainer');
+    const activityContainer = document.getElementById('activityThresholdContainer');
+
+    if (ageContainer) {
+        ageContainer.classList.toggle('active', colorMode === 'age');
+    }
+    if (activityContainer) {
+        activityContainer.classList.toggle('active', colorMode === 'activity');
     }
     render();
 }
@@ -33,6 +38,15 @@ export function toggleColorMode() {
  */
 export function updateAgeThreshold(val) {
     const valSpan = document.getElementById('ageThresholdValue');
+    if (valSpan) valSpan.innerText = val;
+    render();
+}
+
+/**
+ * Update activity threshold slider value
+ */
+export function updateActivityThreshold(val) {
+    const valSpan = document.getElementById('activityThresholdValue');
     if (valSpan) valSpan.innerText = val;
     render();
 }

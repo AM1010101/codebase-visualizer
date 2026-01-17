@@ -8,6 +8,7 @@ import { initKeyboardShortcuts } from './navigation.js';
 import {
     toggleColorMode,
     updateAgeThreshold,
+    updateActivityThreshold,
     setViewMode,
     clearCollapsed,
     toggleCollapse,
@@ -35,6 +36,7 @@ async function init() {
 // TODO: Refactor to use addEventListener instead of inline handlers
 window.toggleColorMode = toggleColorMode;
 window.updateAgeThreshold = updateAgeThreshold;
+window.updateActivityThreshold = updateActivityThreshold;
 window.setViewMode = setViewMode;
 window.changeCommit = changeCommit;
 window.navigateCommit = navigateCommit;

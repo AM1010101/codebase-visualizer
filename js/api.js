@@ -50,6 +50,20 @@ export async function fetchCommits() {
 }
 
 /**
+ * Fetch activity data from the server
+ */
+export async function fetchActivityData(days = 30) {
+    try {
+        const res = await fetch(`/api/activity?days=${days}`);
+        const activityMap = await res.json();
+        return activityMap;
+    } catch (e) {
+        console.error("Failed to load activity data", e);
+        return {};
+    }
+}
+
+/**
  * Fetch codebase data from the server
  */
 export async function fetchData() {

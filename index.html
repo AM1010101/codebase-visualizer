@@ -95,6 +95,8 @@
                                 onchange="toggleColorMode()">Git Status</label>
                         <label class="radio-option"><input type="radio" name="colorMode" value="age"
                                 onchange="toggleColorMode()">Recency (Blue→Orange)</label>
+                        <label class="radio-option"><input type="radio" name="colorMode" value="activity"
+                                onchange="toggleColorMode()">Activity (Change Count)</label>
                     </div>
                     <div id="ageThresholdContainer" class="age-threshold-container">
                         <label class="age-threshold-label">
@@ -102,6 +104,13 @@
                         </label>
                         <input type="range" id="ageThreshold" min="1" max="60" value="14"
                             oninput="updateAgeThreshold(this.value)">
+                    </div>
+                    <div id="activityThresholdContainer" class="age-threshold-container">
+                        <label class="age-threshold-label">
+                            <span>Activity Window: <span id="activityThresholdValue">30</span> days</span>
+                        </label>
+                        <input type="range" id="activityThreshold" min="7" max="90" value="30"
+                            oninput="updateActivityThreshold(this.value)">
                     </div>
                 </div>
             </div>

@@ -176,6 +176,49 @@ function getDateRangeChanges(startDate, endDate) {
     }
 }
 
+// Get activity counts for files (how many times each file was changed in the last N days)
+function getFileActivityCounts(days) {
+    try {
+        const sinceDate = new Date();
+        sinceDate.setDate(sinceDate.getDate() - days);
+        const sinceDateStr = sinceDate.toISOString().split('T')[0];
+
+        const command = `git log --since="${sinceDateStr}" --name-status --pretty=format:"%h" --no-merges`;
+        const output = execSync(command, { encoding: 'utf8' });
+
+        const activityMap = {}; // file -> count
+        const lines = output.split('\n');
+
+        for (const line of lines) {
+            // Skip empty lines and commit hash lines
+            if (!line.trim() || line.match(/^[0-9a-f]{6,8}$/)) continue;
+
+            const parts = line.split('\t');
+            if (parts.length < 2) continue;
+
+            const statusCode = parts[0].trim();
+            const file = parts[1].trim();
+
+            // Skip if not a valid status code
+            if (!statusCode || statusCode.length === 0) continue;
+
+            const code = statusCode[0]; // M, A, D, etc.
+
+            // Only count actual changes (M, A, D)
+            if (code === 'M' || code === 'A' || code === 'D') {
+                activityMap[file] = (activityMap[file] || 0) + 1;
+            }
+        }
+
+        console.log(`Activity counts for last ${days} days: ${Object.keys(activityMap).length} files with changes`);
+
+        return activityMap;
+    } catch (e) {
+        console.error('Error getting file activity counts:', e);
+        return {};
+    }
+}
+
 function scanCommit(hash, base = null) {
     console.log(`Scanning commit ${hash}${base ? ` relative to ${base}` : ''}...`);
     const statusMap = getCommitChanges(hash, base); // What changed in this range
@@ -301,6 +344,18 @@ const server = http.createServer((req, res) => {
             });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(commits));
+        } catch (e) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: e.message }));
+        }
+    }
+    // 2b. API: Get Activity Counts
+    else if (parsedUrl.pathname === '/api/activity') {
+        try {
+            const days = parseInt(parsedUrl.query.days || '30', 10);
+            const activityMap = getFileActivityCounts(days);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(activityMap));
         } catch (e) {
             res.writeHead(500);
             res.end(JSON.stringify({ error: e.message }));

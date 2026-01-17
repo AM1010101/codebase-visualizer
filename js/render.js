@@ -3,14 +3,15 @@
  */
 
 import { COLORS } from './config.js';
-import { getRawData, getCollapsedFolders } from './state.js';
+import { getRawData, getCollapsedFolders, getActivityData, setActivityData } from './state.js';
 import { filterNode } from './filters.js';
 import { toggleCollapse, focusFolder } from './ui.js';
+import { fetchActivityData } from './api.js';
 
 /**
  * Main render function - creates the D3 treemap visualization
  */
-export function render() {
+export async function render() {
     const rawData = getRawData();
     if (!rawData) return;
 
@@ -46,14 +47,39 @@ export function render() {
             .clamp(true);
     }
 
+    // Calculate Activity Scale for Activity Mode
+    let activityScale = null;
+    let activityMap = null;
+    if (colorMode === 'activity') {
+        const activityDays = parseInt(document.getElementById('activityThreshold').value);
+
+        // Fetch activity data if not already loaded or if days changed
+        activityMap = await fetchActivityData(activityDays);
+        setActivityData(activityMap);
+
+        // Find max activity count for scaling
+        const activityCounts = Object.values(activityMap);
+        const maxActivity = activityCounts.length > 0 ? Math.max(...activityCounts) : 1;
+
+        activityScale = d3.scaleLinear()
+            .domain([0, maxActivity])
+            .range(["#3b82f6", "#f97316"]) // Blue-500 (low activity) to Orange-500 (high activity)
+            .interpolate(d3.interpolateRgb)
+            .clamp(true);
+    }
+
     // FILTER AND TRANSFORM DATA
+    // When in activity mode, override the sizing mode to use activity-based sizing
+    const effectiveMode = colorMode === 'activity' ? 'activity' : mode;
+
     const filteredData = filterNode(rawData, '', {
-        mode,
+        mode: effectiveMode,
         hideClean,
         showUnstaged,
         collapseClean,
         sortMode,
-        foldersFirst
+        foldersFirst,
+        activityMap: activityMap // Pass activity data for sizing
     });
 
     // Check if empty
@@ -109,11 +135,31 @@ export function render() {
                 }
             }
 
+
             if (colorMode === 'age') {
                 if (d.data.last_modified) {
                     return timeScale(new Date(d.data.last_modified).getTime());
                 }
                 return '#e2e8f0';
+            }
+
+            if (colorMode === 'activity') {
+                if (d.data.type === 'file' && activityMap) {
+                    // Build the full path for this file
+                    const pathParts = [];
+                    let current = d;
+                    while (current.parent) {
+                        pathParts.unshift(current.data.name);
+                        current = current.parent;
+                    }
+                    const fullPath = pathParts.join('/');
+
+                    const activityCount = activityMap[fullPath] || 0;
+                    if (activityCount > 0) {
+                        return activityScale(activityCount);
+                    }
+                }
+                return '#e2e8f0'; // Default light gray for no activity
             }
 
             return COLORS[d.data.git_status] || '#cbd5e1';
@@ -208,8 +254,20 @@ export function showTooltip(event, d) {
             timeString = diffDays <= 0 ? 'Today' : (diffDays === 1 ? '1 day ago' : `${diffDays} days ago`);
         }
 
+        // Check if we're in activity mode and get activity count
+        const colorMode = document.querySelector('input[name="colorMode"]:checked')?.value;
+        const activityData = getActivityData();
+        let activityInfo = '';
+
+        if (colorMode === 'activity' && activityData) {
+            const activityCount = activityData[fullPath] || 0;
+            const activityDays = parseInt(document.getElementById('activityThreshold').value);
+            activityInfo = `<span style="display:inline-block; margin-top:2px;">Activity: ${activityCount} change${activityCount !== 1 ? 's' : ''} in last ${activityDays} days</span><br/>`;
+        }
+
         details = `<div style="margin-top:6px; font-size:12px; opacity:0.85; line-height:1.4em; border-top:1px solid rgba(0,0,0,0.1); padding-top:6px;">
             <span style="font-family:monospace; font-size:11px;">${fullPath}</span><br/>
+            ${activityInfo}
             <span style="display:inline-block; margin-top:2px;">Last edited: ${timeString}</span>
         </div>`;
     } else {

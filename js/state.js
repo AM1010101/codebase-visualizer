@@ -13,6 +13,9 @@ let effectiveBase = 'none';
 // Codebase data
 let rawData = null;
 
+// Activity data (file change counts)
+let activityData = null;
+
 // UI state
 let collapsedFolders = new Set();
 
@@ -35,6 +38,10 @@ export function getEffectiveBase() {
 
 export function getRawData() {
     return rawData;
+}
+
+export function getActivityData() {
+    return activityData;
 }
 
 export function getCollapsedFolders() {
@@ -60,6 +67,10 @@ export function setEffectiveBase(base) {
 
 export function setRawData(data) {
     rawData = data;
+}
+
+export function setActivityData(data) {
+    activityData = data;
 }
 
 export function addCollapsedFolder(path) {
