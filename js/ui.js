@@ -8,10 +8,15 @@ import {
     getCollapsedFolders,
     addCollapsedFolder,
     removeCollapsedFolder,
-    clearCollapsedFolders
+    clearCollapsedFolders,
+    getIgnoreList,
+    addToIgnoreList as addToIgnoreListState,
+    removeFromIgnoreList,
+    resetIgnoreList as resetIgnoreListState
 } from './state.js';
 import { render } from './render.js';
 import { changeCommit } from './navigation.js';
+import { fetchData } from './api.js';
 
 /**
  * Toggle between git status and age color modes
@@ -160,4 +165,76 @@ export function updateCollapsedList() {
     } else {
         list.innerText = Array.from(collapsedFolders).join(', ');
     }
+}
+
+/**
+ * Add item to ignore list
+ */
+export async function addToIgnoreList() {
+    const input = document.getElementById('ignoreInput');
+    if (!input) return;
+
+    const value = input.value.trim();
+    if (!value) return;
+
+    const success = addToIgnoreListState(value);
+    if (success) {
+        input.value = '';
+        updateIgnoreListDisplay();
+        // Refresh data with new ignore list
+        await fetchData();
+        render();
+    } else {
+        alert(`"${value}" is already in the ignore list`);
+    }
+}
+
+/**
+ * Remove item from ignore list
+ */
+export async function removeFromIgnoreListUI(item) {
+    const success = removeFromIgnoreList(item);
+    if (success) {
+        updateIgnoreListDisplay();
+        // Refresh data with new ignore list
+        await fetchData();
+        render();
+    }
+}
+
+/**
+ * Reset ignore list to defaults
+ */
+export async function resetIgnoreList() {
+    if (confirm('Reset ignore list to default values?')) {
+        resetIgnoreListState();
+        updateIgnoreListDisplay();
+        // Refresh data with new ignore list
+        await fetchData();
+        render();
+    }
+}
+
+/**
+ * Update the ignore list display
+ */
+export function updateIgnoreListDisplay() {
+    const listContainer = document.getElementById('ignoreList');
+    if (!listContainer) return;
+
+    const ignoreList = getIgnoreList();
+
+    if (ignoreList.length === 0) {
+        listContainer.innerHTML = '<div style="color: #94a3b8; font-style: italic;">No items in ignore list</div>';
+        return;
+    }
+
+    listContainer.innerHTML = ignoreList.map(item => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #334155;">
+            <span style="font-family: 'Courier New', monospace; font-size: 13px;">${item}</span>
+            <button onclick="removeFromIgnoreListUI('${item}')" 
+                style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;"
+                title="Remove from ignore list">×</button>
+        </div>
+    `).join('');
 }

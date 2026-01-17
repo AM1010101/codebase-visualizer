@@ -12,7 +12,11 @@ import {
     setViewMode,
     clearCollapsed,
     toggleCollapse,
-    focusFolder
+    focusFolder,
+    addToIgnoreList,
+    removeFromIgnoreListUI,
+    resetIgnoreList,
+    updateIgnoreListDisplay
 } from './ui.js';
 import { changeCommit, navigateCommit } from './navigation.js';
 
@@ -20,6 +24,9 @@ import { changeCommit, navigateCommit } from './navigation.js';
  * Initialize the application
  */
 async function init() {
+    // Initialize ignore list display
+    updateIgnoreListDisplay();
+
     // Fetch initial data
     await fetchCommits();
     await fetchData();
@@ -42,6 +49,9 @@ window.changeCommit = changeCommit;
 window.navigateCommit = navigateCommit;
 window.clearCollapsed = clearCollapsed;
 window.render = render;
+window.addToIgnoreList = addToIgnoreList;
+window.removeFromIgnoreListUI = removeFromIgnoreListUI;
+window.resetIgnoreList = resetIgnoreList;
 window.fetchData = async () => {
     await fetchData();
     render();

@@ -7,7 +7,7 @@ const url = require('url');
 
 // --- CONFIGURATION ---
 const PORT = 3000;
-const IGNORE = ['.git', 'node_modules', 'dist', '.next', '.idea', '.vscode', '__pycache__', 'coverage', 'android', 'ios'];
+const DEFAULT_IGNORE = ['.git', 'node_modules', 'dist', '.next', '.idea', '.vscode', '__pycache__', 'coverage'];
 
 // --- LIVE SCAN (Current State) ---
 function getGitStatus() {
@@ -29,7 +29,7 @@ function getGitStatus() {
     } catch (e) { return {}; }
 }
 
-function scan(dir, relPath = '', gitMap) {
+function scan(dir, relPath = '', gitMap, IGNORE) {
     const name = path.basename(dir);
     const node = { name: name || 'root', type: 'folder', git_status: 'clean', children: [], value: 0 };
 
@@ -44,7 +44,7 @@ function scan(dir, relPath = '', gitMap) {
         try {
             const stats = fs.statSync(fullPath);
             if (stats.isDirectory()) {
-                const child = scan(fullPath, itemRel, gitMap);
+                const child = scan(fullPath, itemRel, gitMap, IGNORE);
                 if (child.value > 0) {
                     node.children.push(child);
                     node.value += child.value;
@@ -219,7 +219,7 @@ function getFileActivityCounts(days) {
     }
 }
 
-function scanCommit(hash, base = null) {
+function scanCommit(hash, base = null, IGNORE) {
     console.log(`Scanning commit ${hash}${base ? ` relative to ${base}` : ''}...`);
     const statusMap = getCommitChanges(hash, base); // What changed in this range
 
@@ -285,8 +285,28 @@ function scanCommit(hash, base = null) {
     return root;
 }
 
+/**
+ * Parse request body for POST requests
+ */
+function parseRequestBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+        req.on('end', () => {
+            try {
+                resolve(body ? JSON.parse(body) : {});
+            } catch (e) {
+                reject(e);
+            }
+        });
+        req.on('error', reject);
+    });
+}
+
 // --- SERVER LOGIC ---
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
 
     // 1. Serve HTML
@@ -361,119 +381,131 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: e.message }));
         }
     }
-    // 3. API: Get Data (Current or Historic)
+    // 3. API: Get Data (Current or Historic) - Now accepts POST with ignore list
     else if (parsedUrl.pathname === '/api/data') {
-        const commit = parsedUrl.query.commit;
-        const base = parsedUrl.query.base;
-        const startDate = parsedUrl.query.startDate;
-        const endDate = parsedUrl.query.endDate;
+        try {
+            // Parse request body to get ignore list
+            const body = await parseRequestBody(req);
+            const IGNORE = body.ignoreList || DEFAULT_IGNORE;
 
-        let tree;
+            console.log('Using ignore list:', IGNORE);
 
-        // Date Range Mode: Show all files touched by commits in the range
-        if (startDate && endDate) {
-            console.log(`Scanning date range: ${startDate} to ${endDate}...`);
-            try {
-                const statusMap = getDateRangeChanges(startDate, endDate);
+            const commit = parsedUrl.query.commit;
+            const base = parsedUrl.query.base;
+            const startDate = parsedUrl.query.startDate;
+            const endDate = parsedUrl.query.endDate;
 
-                // Get the file tree at the end date
-                const endCommitOutput = execSync(`git log -1 --until="${endDate}" --pretty=format:"%h"`, { encoding: 'utf8' });
-                const endCommit = endCommitOutput.trim();
+            let tree;
 
-                if (!endCommit) {
-                    tree = { name: 'error', value: 0, children: [], error: 'No commits found in date range' };
-                } else {
-                    // Get full file tree at end commit
-                    const output = execSync(`git ls-tree -r -l --full-tree ${endCommit}`, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 10 });
+            // Date Range Mode: Show all files touched by commits in the range
+            if (startDate && endDate) {
+                console.log(`Scanning date range: ${startDate} to ${endDate}...`);
+                try {
+                    const statusMap = getDateRangeChanges(startDate, endDate);
 
-                    const root = { name: 'root', type: 'folder', git_status: 'clean', children: [], value: 0 };
-                    const items = [];
+                    // Get the file tree at the end date
+                    const endCommitOutput = execSync(`git log -1 --until="${endDate}" --pretty=format:"%h"`, { encoding: 'utf8' });
+                    const endCommit = endCommitOutput.trim();
 
-                    // Parse ls-tree output
-                    output.split('\n').forEach(line => {
-                        if (!line) return;
-                        const [meta, filePath] = line.split('\t');
-                        const metaParts = meta.split(' ');
-                        const size = parseInt(metaParts[3] || '0', 10);
+                    if (!endCommit) {
+                        tree = { name: 'error', value: 0, children: [], error: 'No commits found in date range' };
+                    } else {
+                        // Get full file tree at end commit
+                        const output = execSync(`git ls-tree -r -l --full-tree ${endCommit}`, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 10 });
 
-                        // Filter ignores
-                        const parts = filePath.split('/');
-                        if (parts.some(p => IGNORE.includes(p))) return;
+                        const root = { name: 'root', type: 'folder', git_status: 'clean', children: [], value: 0 };
+                        const items = [];
 
-                        items.push({ path: filePath, size: size });
-                    });
+                        // Parse ls-tree output
+                        output.split('\n').forEach(line => {
+                            if (!line) return;
+                            const [meta, filePath] = line.split('\t');
+                            const metaParts = meta.split(' ');
+                            const size = parseInt(metaParts[3] || '0', 10);
 
-                    // Build tree structure
-                    items.forEach(item => {
-                        const parts = item.path.split('/');
-                        let current = root;
+                            // Filter ignores
+                            const parts = filePath.split('/');
+                            if (parts.some(p => IGNORE.includes(p))) return;
 
-                        // Traverse/Create folders
-                        for (let i = 0; i < parts.length - 1; i++) {
-                            const folderName = parts[i];
-                            let folder = current.children.find(c => c.name === folderName);
-                            if (!folder) {
-                                folder = { name: folderName, type: 'folder', git_status: 'clean', children: [], value: 0 };
-                                current.children.push(folder);
-                            }
-                            current = folder;
-                        }
-
-                        // Add file with status from date range
-                        const fileName = parts[parts.length - 1];
-                        const status = statusMap[item.path] || 'clean';
-
-                        current.children.push({
-                            name: fileName,
-                            type: 'file',
-                            value: item.size,
-                            git_status: status,
-                            git_code: 'DR' // DR for Date Range
+                            items.push({ path: filePath, size: size });
                         });
-                    });
 
-                    // Recalculate folder values recursively
-                    function calcValues(node) {
-                        if (node.type === 'file') return node.value;
-                        node.value = node.children.reduce((sum, c) => sum + calcValues(c), 0);
-                        return node.value;
+                        // Build tree structure
+                        items.forEach(item => {
+                            const parts = item.path.split('/');
+                            let current = root;
+
+                            // Traverse/Create folders
+                            for (let i = 0; i < parts.length - 1; i++) {
+                                const folderName = parts[i];
+                                let folder = current.children.find(c => c.name === folderName);
+                                if (!folder) {
+                                    folder = { name: folderName, type: 'folder', git_status: 'clean', children: [], value: 0 };
+                                    current.children.push(folder);
+                                }
+                                current = folder;
+                            }
+
+                            // Add file with status from date range
+                            const fileName = parts[parts.length - 1];
+                            const status = statusMap[item.path] || 'clean';
+
+                            current.children.push({
+                                name: fileName,
+                                type: 'file',
+                                value: item.size,
+                                git_status: status,
+                                git_code: 'DR' // DR for Date Range
+                            });
+                        });
+
+                        // Recalculate folder values recursively
+                        function calcValues(node) {
+                            if (node.type === 'file') return node.value;
+                            node.value = node.children.reduce((sum, c) => sum + calcValues(c), 0);
+                            return node.value;
+                        }
+                        calcValues(root);
+
+                        tree = root;
                     }
-                    calcValues(root);
-
-                    tree = root;
+                } catch (e) {
+                    console.error("Error scanning date range:", e);
+                    tree = { name: 'error', value: 0, children: [], error: e.message };
                 }
-            } catch (e) {
-                console.error("Error scanning date range:", e);
-                tree = { name: 'error', value: 0, children: [], error: e.message };
             }
-        }
-        // Diff Mode: Compare target with base
-        else if (base && base !== 'none') {
-            try {
-                tree = scanCommit(commit || 'latest', base);
-            } catch (e) {
-                console.error("Error scanning diff:", e);
-                tree = { name: 'error', value: 0, children: [] };
+            // Diff Mode: Compare target with base
+            else if (base && base !== 'none') {
+                try {
+                    tree = scanCommit(commit || 'latest', base, IGNORE);
+                } catch (e) {
+                    console.error("Error scanning diff:", e);
+                    tree = { name: 'error', value: 0, children: [] };
+                }
             }
-        }
-        // Single Commit Mode
-        else if (commit && commit !== 'latest') {
-            try {
-                tree = scanCommit(commit);
-            } catch (e) {
-                console.error("Error scanning commit:", e);
-                tree = { name: 'error', value: 0, children: [] };
+            // Single Commit Mode
+            else if (commit && commit !== 'latest') {
+                try {
+                    tree = scanCommit(commit, null, IGNORE);
+                } catch (e) {
+                    console.error("Error scanning commit:", e);
+                    tree = { name: 'error', value: 0, children: [] };
+                }
             }
-        }
-        // Live Mode
-        else {
-            console.log("Scanning live codebase...");
-            const gitMap = getGitStatus();
-            tree = scan(process.cwd(), '', gitMap);
-        }
+            // Live Mode
+            else {
+                console.log("Scanning live codebase...");
+                const gitMap = getGitStatus();
+                tree = scan(process.cwd(), '', gitMap, IGNORE);
+            }
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(tree));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(tree));
+        } catch (e) {
+            console.error("Error in /api/data:", e);
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: e.message }));
+        }
     }
     else {
         res.writeHead(404);

@@ -2,7 +2,7 @@
  * API communication with the backend server
  */
 
-import { setAllCommits, setRawData, getEffectiveTarget, getEffectiveBase } from './state.js';
+import { setAllCommits, setRawData, getEffectiveTarget, getEffectiveBase, getIgnoreList } from './state.js';
 
 /**
  * Fetch commit history from the server
@@ -69,6 +69,7 @@ export async function fetchActivityData(days = 30) {
 export async function fetchData() {
     const effectiveTarget = getEffectiveTarget();
     const effectiveBase = getEffectiveBase();
+    const ignoreList = getIgnoreList();
 
     if (!effectiveTarget) return;
 
@@ -107,7 +108,14 @@ export async function fetchData() {
     container.appendChild(loading);
 
     try {
-        const res = await fetch(url);
+        // Send ignore list via POST request
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ignoreList })
+        });
         const data = await res.json();
         setRawData(data);
 

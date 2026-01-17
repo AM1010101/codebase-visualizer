@@ -139,6 +139,28 @@
         </details>
 
         <details>
+            <summary>Ignore List</summary>
+            <div class="accordion-content">
+                <div style="margin-bottom: 12px;">
+                    <label class="form-label" style="margin-bottom: 6px; display: block;">Add folder/file to
+                        ignore:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="ignoreInput" class="select-input" placeholder="e.g., node_modules"
+                            style="flex: 1;" onkeypress="if(event.key==='Enter') addToIgnoreList()">
+                        <button onclick="addToIgnoreList()" class="refresh-btn" title="Add to ignore list"
+                            style="padding: 8px 16px; border-radius: 8px;">Add</button>
+                    </div>
+                </div>
+                <div id="ignoreList" class="collapsed-list" style="max-height: 200px; overflow-y: auto;">
+                    Loading...
+                </div>
+                <button class="secondary w-full" onclick="resetIgnoreList()"
+                    style="padding: 8px; font-size: 12px; border-radius: 8px; cursor: pointer; margin-top: 8px;">Reset
+                    to Defaults</button>
+            </div>
+        </details>
+
+        <details>
             <summary>Collapsed Folders</summary>
             <div class="accordion-content">
                 <div id="collapsedList" class="collapsed-list">

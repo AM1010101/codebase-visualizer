@@ -2,6 +2,9 @@
  * Global state management
  */
 
+// Default ignore list
+const DEFAULT_IGNORE_LIST = ['.git', 'node_modules', 'dist', '.next', '.idea', '.vscode', '__pycache__', 'coverage', 'android', 'ios'];
+
 // View mode state
 let currentViewMode = 'single';
 
@@ -18,6 +21,35 @@ let activityData = null;
 
 // UI state
 let collapsedFolders = new Set();
+
+// Ignore list state (loaded from localStorage)
+let ignoreList = loadIgnoreListFromStorage();
+
+/**
+ * Load ignore list from localStorage
+ */
+function loadIgnoreListFromStorage() {
+    try {
+        const stored = localStorage.getItem('codebase-visualizer-ignore-list');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.error('Failed to load ignore list from localStorage', e);
+    }
+    return [...DEFAULT_IGNORE_LIST];
+}
+
+/**
+ * Save ignore list to localStorage
+ */
+function saveIgnoreListToStorage() {
+    try {
+        localStorage.setItem('codebase-visualizer-ignore-list', JSON.stringify(ignoreList));
+    } catch (e) {
+        console.error('Failed to save ignore list to localStorage', e);
+    }
+}
 
 // Getters
 export function getCurrentViewMode() {
@@ -46,6 +78,14 @@ export function getActivityData() {
 
 export function getCollapsedFolders() {
     return collapsedFolders;
+}
+
+export function getIgnoreList() {
+    return ignoreList;
+}
+
+export function getDefaultIgnoreList() {
+    return [...DEFAULT_IGNORE_LIST];
 }
 
 // Setters
@@ -87,4 +127,31 @@ export function clearCollapsedFolders() {
 
 export function hasCollapsedFolder(path) {
     return collapsedFolders.has(path);
+}
+
+// Ignore list management
+export function addToIgnoreList(item) {
+    if (!item || item.trim() === '') return false;
+    const trimmedItem = item.trim();
+    if (!ignoreList.includes(trimmedItem)) {
+        ignoreList.push(trimmedItem);
+        saveIgnoreListToStorage();
+        return true;
+    }
+    return false;
+}
+
+export function removeFromIgnoreList(item) {
+    const index = ignoreList.indexOf(item);
+    if (index > -1) {
+        ignoreList.splice(index, 1);
+        saveIgnoreListToStorage();
+        return true;
+    }
+    return false;
+}
+
+export function resetIgnoreList() {
+    ignoreList = [...DEFAULT_IGNORE_LIST];
+    saveIgnoreListToStorage();
 }
