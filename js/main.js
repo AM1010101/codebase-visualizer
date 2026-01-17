@@ -1,0 +1,53 @@
+/**
+ * Application initialization and orchestration
+ */
+
+import { fetchCommits, fetchData } from './api.js';
+import { render } from './render.js';
+import { initKeyboardShortcuts } from './navigation.js';
+import {
+    toggleColorMode,
+    updateAgeThreshold,
+    setViewMode,
+    clearCollapsed,
+    toggleCollapse,
+    focusFolder
+} from './ui.js';
+import { changeCommit, navigateCommit } from './navigation.js';
+
+/**
+ * Initialize the application
+ */
+async function init() {
+    // Fetch initial data
+    await fetchCommits();
+    await fetchData();
+    render();
+
+    // Setup keyboard shortcuts
+    initKeyboardShortcuts();
+
+    // Setup window resize handler
+    window.addEventListener('resize', render);
+}
+
+// Expose functions to global scope for inline event handlers
+// TODO: Refactor to use addEventListener instead of inline handlers
+window.toggleColorMode = toggleColorMode;
+window.updateAgeThreshold = updateAgeThreshold;
+window.setViewMode = setViewMode;
+window.changeCommit = changeCommit;
+window.navigateCommit = navigateCommit;
+window.clearCollapsed = clearCollapsed;
+window.render = render;
+window.fetchData = async () => {
+    await fetchData();
+    render();
+};
+
+// Start the application when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
