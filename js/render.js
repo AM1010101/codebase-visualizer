@@ -213,29 +213,7 @@ export function showTooltip(event, d) {
     const canvasRect = canvas.getBoundingClientRect();
     const collapsedFolders = getCollapsedFolders();
 
-    tooltip.style.opacity = 1;
-
-    // Initial positioning
-    let left = event.clientX - canvasRect.left + 15;
-    let top = event.clientY - canvasRect.top + 15;
-
-    // Check bounds
-    // We use a timeout or a temporary render to get the width/height of the tooltip
-    // because it might change content. For now, let's use some safe margins.
-    const tooltipWidth = tooltip.offsetWidth || 200;
-    const tooltipHeight = tooltip.offsetHeight || 150;
-
-    if (left + tooltipWidth > canvasRect.width) {
-        left = event.clientX - canvasRect.left - tooltipWidth - 15;
-    }
-
-    if (top + tooltipHeight > canvasRect.height) {
-        top = event.clientY - canvasRect.top - tooltipHeight - 15;
-    }
-
-    tooltip.style.left = left + "px";
-    tooltip.style.top = top + "px";
-
+    // Build tooltip content FIRST (before positioning)
     const isCollapsed = collapsedFolders.has(d.data.path);
     let collapsedLabel = '';
     if (isCollapsed) collapsedLabel = '<br/><em>(Click to expand)</em><br/><em>(Shift+Click to focus)</em>';
@@ -266,7 +244,7 @@ export function showTooltip(event, d) {
         }
 
         details = `<div style="margin-top:6px; font-size:12px; opacity:0.85; line-height:1.4em; border-top:1px solid rgba(0,0,0,0.1); padding-top:6px;">
-            <span style="font-family:monospace; font-size:11px;">${fullPath}</span><br/>
+            <span style="font-family:monospace; font-size:11px; word-break:break-all; overflow-wrap:break-word;">${fullPath}</span><br/>
             ${activityInfo}
             <span style="display:inline-block; margin-top:2px;">Last edited: ${timeString}</span>
         </div>`;
@@ -275,5 +253,83 @@ export function showTooltip(event, d) {
         details = `${valLabel}: ${d.value}`;
     }
 
+    // Set content first so we can measure accurate dimensions
     tooltip.innerHTML = `<strong>${d.data.name}</strong><br/><span style="font-size:11px; font-weight:500">${statusText}</span><br/>${details}${collapsedLabel}`;
+
+    // Make visible but off-screen to measure
+    tooltip.style.opacity = 1;
+    tooltip.style.left = '-9999px';
+    tooltip.style.top = '-9999px';
+
+    // Force a reflow to get accurate measurements
+    const tooltipWidth = tooltip.offsetWidth;
+    const tooltipHeight = tooltip.offsetHeight;
+
+    // Mouse position relative to canvas
+    const mouseX = event.clientX - canvasRect.left;
+    const mouseY = event.clientY - canvasRect.top;
+
+    // Offset from cursor
+    const offset = 15;
+    const padding = 10; // Padding from edges
+
+    // Try different positions in order of preference:
+    // 1. Right-bottom (default)
+    // 2. Left-bottom
+    // 3. Right-top
+    // 4. Left-top
+
+    let left, top;
+    let positioned = false;
+
+    // Try right-bottom
+    left = mouseX + offset;
+    top = mouseY + offset;
+    if (left + tooltipWidth + padding <= canvasRect.width &&
+        top + tooltipHeight + padding <= canvasRect.height) {
+        positioned = true;
+    }
+
+    // Try left-bottom
+    if (!positioned) {
+        left = mouseX - tooltipWidth - offset;
+        top = mouseY + offset;
+        if (left >= padding &&
+            top + tooltipHeight + padding <= canvasRect.height) {
+            positioned = true;
+        }
+    }
+
+    // Try right-top
+    if (!positioned) {
+        left = mouseX + offset;
+        top = mouseY - tooltipHeight - offset;
+        if (left + tooltipWidth + padding <= canvasRect.width &&
+            top >= padding) {
+            positioned = true;
+        }
+    }
+
+    // Try left-top
+    if (!positioned) {
+        left = mouseX - tooltipWidth - offset;
+        top = mouseY - tooltipHeight - offset;
+        if (left >= padding && top >= padding) {
+            positioned = true;
+        }
+    }
+
+    // If none of the quadrants work, clamp to viewport (fallback)
+    if (!positioned) {
+        left = mouseX + offset;
+        top = mouseY + offset;
+    }
+
+    // Final clamping to ensure tooltip stays within bounds
+    left = Math.max(padding, Math.min(left, canvasRect.width - tooltipWidth - padding));
+    top = Math.max(padding, Math.min(top, canvasRect.height - tooltipHeight - padding));
+
+    // Apply final position
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
 }

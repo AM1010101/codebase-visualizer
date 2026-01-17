@@ -167,7 +167,10 @@ select:focus {
     z-index: 100;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
     min-width: 150px;
+    max-width: 400px;
     transform: translateY(10px);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 rect {
