@@ -15,6 +15,7 @@
 ✅ File list with +/- LOC stats (click to open, hover to highlight) - done
 ✅ More folder labels - done
 ✅ Show deletions in treemap - done
+✅ Dual-mode support (Local + GitHub repos) - done
 
 🚧 In Progress:
 - File tree for files changed (enhance existing)

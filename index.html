@@ -25,6 +25,39 @@
         </div>
 
         <details open>
+            <summary>Source Mode</summary>
+            <div class="accordion-content">
+                <div class="view-mode-group">
+                    <button id="modeLocal" class="view-mode-btn active" onclick="setSourceMode('local')">Local
+                        Repo</button>
+                    <button id="modeGitHub" class="view-mode-btn" onclick="setSourceMode('github')">GitHub Repo</button>
+                </div>
+
+                <div id="githubInputs" class="hidden" style="margin-top: 12px;">
+                    <div style="margin-bottom: 12px;">
+                        <label class="form-label" style="margin-bottom: 6px; display: block;">Repository URL:</label>
+                        <input type="text" id="githubRepoUrl" class="select-input"
+                            placeholder="e.g., https://github.com/owner/repo or owner/repo"
+                            style="width: 100%; margin-bottom: 8px;">
+                        <div style="display: flex; gap: 8px;">
+                            <select id="githubBranchSelect" class="select-input" style="flex: 1;"
+                                onchange="changeGitHubBranch()">
+                                <option value="">Default Branch</option>
+                            </select>
+                            <button onclick="loadGitHubRepo()" class="refresh-btn" title="Load Repository"
+                                style="padding: 8px 16px; border-radius: 8px;">Load</button>
+                        </div>
+                    </div>
+                    <div id="githubStatus" style="font-size: 12px; opacity: 0.8; margin-top: 8px;"></div>
+                </div>
+
+                <div id="localStatus" style="font-size: 12px; opacity: 0.8; margin-top: 8px;">
+                    Using local repository
+                </div>
+            </div>
+        </details>
+
+        <details open>
             <summary>Time Travel</summary>
             <div class="accordion-content">
                 <div class="view-mode-group">
@@ -229,6 +262,7 @@
         </div>
     </div>
 
+    <script src="js/github-api.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 

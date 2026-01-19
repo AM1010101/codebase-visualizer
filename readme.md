@@ -1,80 +1,199 @@
-# Codebase Git Visualizer
+# Codebase Visualizer
 
-A lightweight tool to visualize your git repository as an interactive Icicle Chart. It maps your file system and overlays live Git status (Modified, Created, Deleted), helping you spot complexity and review changes visually.
+A powerful D3-based treemap visualization tool for exploring git repositories, supporting both **local repositories** and **public GitHub repositories**.
 
-I created this to try and better visualise how my codebase is changing as AI is writing more and more code. 
-
-![Codebase Visualizer Preview](preview.png)
+![Codebase Visualizer](https://img.shields.io/badge/visualization-D3.js-orange)
+![Mode](https://img.shields.io/badge/mode-local%20%7C%20github-blue)
 
 ## Features
 
-* **Interactive Icicle Chart:** Visualize your folder structure depth and scope.
-* **Git Overlay:** Instantly see which files are Modified (Orange), Created (Green), or Untracked (Blue).
-* **Two Sizing Modes:**
-  * **File Size:** Quickly identify massive assets or bloated files.
-  * **Uniform (Count):** See the architectural complexity by treating every file as equal width.
-* **Focus Mode:** Toggle to hide all "Clean" files, isolating only your active changes (perfect for self-code-review).
-* **Live Refresh:** No restart required. Just save your code, hit "Refresh" in the browser, and see the map update.
-* **Commit Explorer:** Move between commits to see the changes in the codebase over time.
+✅ **Dual Mode Support**
+- 🖥️ **Local Mode**: Analyze repositories on your machine with full git command access
+- 🌐 **GitHub Mode**: Analyze any public GitHub repository without cloning
 
-## Prerequisites
+✅ **Time Travel**
+- View any commit in history
+- Compare between commits (diff mode)
+- Filter by date range
+- Filter by author
 
-* **Node.js** (v12 or higher recommended).
-* **Git** installed and available in your terminal.
+✅ **Visual Styles**
+- Color by git status (modified, created, deleted)
+- Color by file age (recency)
+- Color by activity (change frequency)
+- Adjustable sizing (file size vs uniform)
 
-## Installation
+✅ **Interactive Features**
+- Hover to see file details
+- Click folders to collapse/expand
+- Highlight files in treemap from file list
+- Smooth D3 animations between states
 
-This tool requires** ** **zero** **`npm install`** . It uses standard Node.js libraries (`http`,** **`fs`,** **`child_process`).
+✅ **File Analysis**
+- View all changed files with +/- line counts
+- Expand folders with modifications
+- Visual distinction for deletions (striped pattern)
 
-1. Create a folder for the tool inside your project (or keep it external):
-   **Bash**
+## Getting Started
 
+### Local Mode (Default)
+
+1. **Start the server:**
+   ```bash
+   node server.js
    ```
-   mkdir codebase-visualizer
+
+2. **Open in browser:**
    ```
-2. Place the** **`server.js` and** **`index.html` files inside that folder.
+   http://localhost:3000
+   ```
 
-## Usage
+3. **The tool will automatically scan your current directory's git repository**
 
-### 1. Start the Server
+### GitHub Mode
 
-Run the server from the** ****root** of the codebase you want to scan.
+1. **Switch to GitHub Mode:**
+   - Click the "GitHub Repo" button in the "Source Mode" section
 
-**Bash**
+2. **Enter a repository:**
+   - Full URL: `https://github.com/facebook/react`
+   - Short form: `facebook/react`
+   - With branch: `https://github.com/facebook/react/tree/main`
+
+3. **Select a branch** (optional):
+   - Choose from the dropdown after loading
+   - Defaults to the repository's default branch
+
+4. **Click "Load"** to visualize the repository
+
+## Usage Examples
+
+### Analyzing a Public Repository
 
 ```
-# If the tool is inside your project folder:
-node codebase-visualizer/server.js
-
-# If the tool is in a totally different folder:
-node /path/to/codebase-visualizer/server.js
+Repository URL: d3/d3
+Branch: main
 ```
 
-### 2. Open in Browser
+This will visualize the D3.js repository structure and commit history.
 
-Go to** **[http://localhost:3000](https://www.google.com/search?q=http://localhost:3000)
+### Comparing Commits
 
-### 3. Workflow
+1. Switch to "Manual Diff" mode
+2. Select a target commit
+3. Select a base commit to compare against
+4. View the differences in the treemap
 
-1. Write code in your editor.
-2. Switch to the browser and click** ** **"🔄 Refresh Data"** .
-3. Use** ****Focus Mode** to check your work before committing.
+### Filtering by Date Range
+
+1. Switch to "Date Range" mode
+2. Select start and end dates
+3. View all files changed during that period
+
+### Filtering by Author
+
+1. Select an author from the "Filter by Author" dropdown
+2. Only commits by that author will be shown in the timeline
 
 ## Configuration
 
-You can customize the tool by editing the top variables in** **`server.js`:
+### Ignore List
 
-* **PORT:** Change the default port** **`3000` if needed.
-* **IGNORE:** Add folders you want to exclude from the scan (e.g.,** **`coverage`,** **`build`,** **`tmp`).
+Customize which folders/files to exclude:
+- Add items via the "Ignore List" section
+- Stored in browser localStorage
+- Default ignores: `.git`, `node_modules`, `dist`, etc.
 
-**JavaScript**
+### GitHub API Rate Limits
 
+- **Unauthenticated**: 60 requests/hour
+- **With token**: 5,000 requests/hour
+
+To use a GitHub token (optional):
+```javascript
+// In browser console
+window.GitHubAPI.setToken('your_github_token_here');
 ```
-const IGNORE = ['.git', 'node_modules', 'dist', '.next', 'codebase-visualizer'];
+
+## Architecture
+
+### Local Mode
 ```
+Browser → Node.js Server → Git Commands → Local Repository
+```
+
+### GitHub Mode
+```
+Browser → GitHub REST API → Public Repository
+```
+
+### Key Files
+
+- `server.js` - Node.js backend for local git operations
+- `js/github-api.js` - GitHub API client
+- `js/github-adapter.js` - Transforms GitHub data to match local format
+- `js/github-mode.js` - UI functions for GitHub mode
+- `js/api.js` - Unified API layer (routes to local or GitHub)
+- `js/render.js` - D3 treemap visualization
+- `js/state.js` - Global state management
+
+## Keyboard Shortcuts
+
+- `←` / `→` - Navigate through commits
+- `Escape` - Clear collapsed folders
+
+## Browser Compatibility
+
+- Chrome/Edge (recommended)
+- Firefox
+- Safari
+
+## Dependencies
+
+- **D3.js v7** - Visualization library
+- **Node.js** - For local mode server
+
+## Tips
+
+### For Large Repositories
+
+- Use the ignore list to exclude large folders
+- GitHub mode is faster for initial exploration (no cloning needed)
+- Local mode provides more detailed git information
+
+### For Analysis
+
+- Use "Activity" color mode to find frequently changed files
+- Use "Age" color mode to find recently modified areas
+- Compare commits to see specific changes between versions
 
 ## Troubleshooting
 
-* **"Error loading index.html":** Ensure** **`server.js` and** **`index.html` are in the** ***same* directory.
-* **"All files are clean!":** If you are in Focus Mode, this is good! If not, ensure you ran the** **`node` command from the root of a git repository, not from inside a subfolder.
-* **"Chart is empty":** Check if your folder is listed in the** **`IGNORE` array in** **`server.js`.
+### "Error fetching data. Is server.js running?"
+- Make sure you're in local mode and the server is running
+- Check that you're in a git repository directory
+
+### GitHub API Rate Limit Exceeded
+- Wait for the rate limit to reset (shown in error message)
+- Add a GitHub personal access token for higher limits
+
+### Repository Not Loading
+- Verify the repository URL is correct
+- Ensure the repository is public (private repos not supported in GitHub mode)
+- Check browser console for detailed error messages
+
+## Future Enhancements
+
+- Private repository support (with OAuth)
+- GitLab/Bitbucket support
+- Export visualizations as images
+- Custom color schemes
+- File content preview
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions welcome! Feel free to open issues or submit pull requests.

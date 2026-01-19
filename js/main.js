@@ -23,6 +23,7 @@ import {
 } from './ui.js';
 import { changeCommit, navigateCommit } from './navigation.js';
 import { fetchFileStats, cycleFileSort, openFile, highlightFileInTree, clearFileHighlight, highlightFileInListOnly, clearFileListHighlightOnly } from './fileChanges.js';
+import { setSourceMode, loadGitHubRepo, changeGitHubBranch } from './github-mode.js';
 
 /**
  * Initialize the application
@@ -67,6 +68,9 @@ window.highlightFileInTree = highlightFileInTree;
 window.clearFileHighlight = clearFileHighlight;
 window.highlightFileInListOnly = highlightFileInListOnly;
 window.clearFileListHighlightOnly = clearFileListHighlightOnly;
+window.setSourceMode = setSourceMode;
+window.loadGitHubRepo = loadGitHubRepo;
+window.changeGitHubBranch = changeGitHubBranch;
 window.fetchData = async () => {
     await fetchData();
     await fetchFileStats();

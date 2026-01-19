@@ -1,20 +1,34 @@
 /**
- * API communication with the backend server
+ * API communication with the backend server or GitHub API
  */
 
-import { setAllCommits, setRawData, getEffectiveTarget, getEffectiveBase, getIgnoreList } from './state.js';
+import { setAllCommits, setRawData, getEffectiveTarget, getEffectiveBase, getIgnoreList, getSourceMode } from './state.js';
+import { fetchGitHubCommits, fetchGitHubData, fetchGitHubFileStats } from './github-adapter.js';
 
 /**
  * Fetch commit history from the server
  */
 export async function fetchCommits() {
+    const sourceMode = getSourceMode();
+
     try {
-        const res = await fetch('/api/commits');
-        const commits = await res.json();
+        let commits;
+
+        if (sourceMode === 'github') {
+            commits = await fetchGitHubCommits();
+        } else {
+            const res = await fetch('/api/commits');
+            commits = await res.json();
+        }
+
         setAllCommits(commits);
 
         const select = document.getElementById('commitSelect');
         const baseSelect = document.getElementById('baseCommitSelect');
+
+        // Clear existing options
+        select.innerHTML = '';
+        baseSelect.innerHTML = '<option value="none">--- Select Base ---</option>';
 
         commits.forEach((c, idx) => {
             const opt = document.createElement('option');
@@ -67,6 +81,7 @@ export async function fetchActivityData(days = 30) {
  * Fetch codebase data from the server
  */
 export async function fetchData() {
+    const sourceMode = getSourceMode();
     const effectiveTarget = getEffectiveTarget();
     const effectiveBase = getEffectiveBase();
     const ignoreList = getIgnoreList();
@@ -105,15 +120,23 @@ export async function fetchData() {
     container.appendChild(loading);
 
     try {
-        // Send ignore list via POST request
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ ignoreList })
-        });
-        const data = await res.json();
+        let data;
+
+        if (sourceMode === 'github') {
+            // Use GitHub API
+            data = await fetchGitHubData({ commit: effectiveTarget, base: effectiveBase });
+        } else {
+            // Send ignore list via POST request to local server
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ignoreList })
+            });
+            data = await res.json();
+        }
+
         setRawData(data);
 
         // Remove loading overlay

@@ -5,6 +5,10 @@
 // Default ignore list
 const DEFAULT_IGNORE_LIST = ['.git', 'node_modules', 'dist', '.next', '.idea', '.vscode', '__pycache__', 'coverage', 'android', 'ios'];
 
+// Source mode state
+let sourceMode = 'local'; // 'local' or 'github'
+let githubRepoInfo = null; // { owner, repo, branch }
+
 // View mode state
 let currentViewMode = 'single';
 
@@ -188,3 +192,21 @@ export function getHoveredFilePath() {
 export function setHoveredFilePath(path) {
     hoveredFilePath = path;
 }
+
+// Source mode management
+export function getSourceMode() {
+    return sourceMode;
+}
+
+export function setSourceMode(mode) {
+    sourceMode = mode;
+}
+
+export function getGitHubRepoInfo() {
+    return githubRepoInfo;
+}
+
+export function setGitHubRepoInfo(info) {
+    githubRepoInfo = info;
+}
+

@@ -2,8 +2,9 @@
  * File changes list functionality
  */
 
-import { getEffectiveTarget, getEffectiveBase, setHoveredFilePath } from './state.js';
+import { getEffectiveTarget, getEffectiveBase, setHoveredFilePath, getSourceMode } from './state.js';
 import { render } from './render.js';
+import { fetchGitHubFileStats } from './github-adapter.js';
 
 let currentFileStats = [];
 let currentSortMode = 'changes'; // 'changes', 'name', 'added', 'removed'
@@ -12,29 +13,39 @@ let currentSortMode = 'changes'; // 'changes', 'name', 'added', 'removed'
  * Fetch file statistics from the server
  */
 export async function fetchFileStats() {
+    const sourceMode = getSourceMode();
     const effectiveTarget = getEffectiveTarget();
     const effectiveBase = getEffectiveBase();
 
     if (!effectiveTarget) return;
 
-    let url;
-
-    // Check if this is a date range query
-    if (effectiveTarget.startsWith('dateRange:')) {
-        const parts = effectiveTarget.split(':');
-        const startDate = parts[1];
-        const endDate = parts[2];
-        url = `/api/file-stats?startDate=${startDate}&endDate=${endDate}`;
-    } else {
-        url = `/api/file-stats?commit=${effectiveTarget}`;
-        if (effectiveBase && effectiveBase !== 'none') {
-            url += `&base=${effectiveBase}`;
-        }
-    }
-
     try {
-        const res = await fetch(url);
-        const fileStats = await res.json();
+        let fileStats;
+
+        if (sourceMode === 'github') {
+            // Use GitHub API
+            fileStats = await fetchGitHubFileStats({ commit: effectiveTarget, base: effectiveBase });
+        } else {
+            // Use local server
+            let url;
+
+            // Check if this is a date range query
+            if (effectiveTarget.startsWith('dateRange:')) {
+                const parts = effectiveTarget.split(':');
+                const startDate = parts[1];
+                const endDate = parts[2];
+                url = `/api/file-stats?startDate=${startDate}&endDate=${endDate}`;
+            } else {
+                url = `/api/file-stats?commit=${effectiveTarget}`;
+                if (effectiveBase && effectiveBase !== 'none') {
+                    url += `&base=${effectiveBase}`;
+                }
+            }
+
+            const res = await fetch(url);
+            fileStats = await res.json();
+        }
+
         currentFileStats = fileStats;
         renderFileChangesList();
     } catch (e) {
